@@ -1,8 +1,17 @@
-#Docker Images Setup 
+# Docker Images Setup 🐳
 
-Each of these folders include the required components for building the docker containers that deploy all the services defined in the Proof of Concept. 
+This folder contains all the components required to **build Docker containers** that deploy the services defined in the **Proof of Concept (PoC)**.
 
-Please, note that for the Markov and VAR predictors, two files required to be compressed due to its large size. They are included in its respective /app folder.  
+## 📦 Folder Structure
 
+Each subfolder includes the necessary files and Dockerfiles for building the corresponding container.  
 
+**Important:**  
+For the **Markov** and **VAR predictors**, two large files need to be compressed due to their size. These files are already included in their respective `/app` folders.
 
+## ⚙️ How to Build
+
+To build the Docker images, navigate to the folder and run:
+
+```bash
+docker build -t <your-username>/<image-name> .
