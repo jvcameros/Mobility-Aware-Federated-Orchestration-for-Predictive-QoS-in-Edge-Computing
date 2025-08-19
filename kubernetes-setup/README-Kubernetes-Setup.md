@@ -7,8 +7,8 @@ This folder contains all the required manifests for deploying **Kubernetes** and
 - Deployment manifests for Kubernetes services
 - Deployment manifests for Istio services
 - Automation scripts:
-  - `setup.sh` → Automates the deployment
-  - `cleanup.sh` → Automates the deletion
+  - `set-up-fullArch.sh` → Automates the deployment
+  - `del-fullArch.sh` → Automates the deletion
 
 ## 🔑 Important Notes
 
