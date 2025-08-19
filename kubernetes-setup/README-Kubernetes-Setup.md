@@ -1,6 +1,6 @@
 # Kubernetes & Istio Deployment
 
-This folder contains all the required manifests for deploying **Kubernetes** and **Istio** services, along with two scripts that automate their **setup** and **deletion** from one of the master nodes in the clusters.
+This folder contains all the required manifests for deploying **Kubernetes** and **Istio** resources, along with two scripts that automate their **setup** and **deletion** from one of the master nodes in the clusters.
 
 ## ⚙️ Features
 
