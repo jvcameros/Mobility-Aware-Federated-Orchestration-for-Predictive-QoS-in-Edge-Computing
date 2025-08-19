@@ -1,0 +1,17 @@
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: redis-per-cluster
+  namespace: car
+spec:
+  host: redis.car.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+  subsets:
+  - name: edge
+    labels:
+      cluster: edge-cluster
+  - name: cloud
+    labels:
+      cluster: cloud-cluster

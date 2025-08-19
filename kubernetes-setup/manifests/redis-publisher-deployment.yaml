@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-publisher-service
+  labels:
+    cluster: edge-cluster
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis-publisher-service
+      cluster: edge-cluster
+  template:
+    metadata:
+      labels:
+        app: redis-publisher-service
+        cluster: edge-cluster
+    spec:
+      nodeSelector:
+        allocating: car-service
+      containers:
+        - name: redis-publisher-service
+          image: jvcameros/redis-service
+          env:
+            - name: REDIS_HOST
+              value: "redis"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: CLUSTER_NAME
+              value: "Edge-cluster"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-publisher-service
+  labels:
+    cluster: cloud-cluster
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis-publisher-service
+      cluster: cloud-cluster
+  template:
+    metadata:
+      labels:
+        app: redis-publisher-service
+        cluster: cloud-cluster
+    spec:
+      nodeSelector:
+        allocating: car-service
+      containers:
+        - name: redis-publisher-service
+          image: jvcameros/redis-service
+          env:
+            - name: REDIS_HOST
+              value: "redis"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: CLUSTER_NAME
+              value: "Cloud-cluster"

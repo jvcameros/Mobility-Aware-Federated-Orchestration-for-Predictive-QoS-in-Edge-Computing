@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orchestrator-edge
+  namespace: orchestrator
+  labels:
+    app: orchestrator-edge
+    cluster: edge-cluster
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: orchestrator-edge
+      cluster: edge-cluster
+  template:
+    metadata:
+      labels:
+        app: orchestrator-edge
+        cluster: edge-cluster
+    spec:
+      nodeSelector:
+        allocating: orchestrator
+      containers:
+        - name: orchestrator-edge
+          image: jvcameros/orchestrator:latest
+          ports:
+            - containerPort: 1000
+          env:
+            - name: POP_NAME
+              value: "PoP1"
+            - name: CLUSTER_NAME
+              value: "edge-cluster"
+            - name: CLUSTER_NET
+              value: "edge_net"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orchestrator-cloud
+  namespace: orchestrator
+  labels:
+    app: orchestrator-cloud
+    cluster: cloud-cluster
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: orchestrator-cloud
+      cluster: cloud-cluster
+  template:
+    metadata:
+      labels:
+        app: orchestrator-cloud
+        cluster: cloud-cluster
+    spec:
+      nodeSelector:
+        allocating: orchestrator
+      containers:
+        - name: orchestrator-cloud
+          image: jvcameros/orchestrator:latest
+          ports:
+            - containerPort: 1000
+          env:
+            - name: POP_NAME
+              value: "PoP2"
+            - name: CLUSTER_NAME
+              value: "cloud-cluster"
+            - name: CLUSTER_NET
+              value: "cloud_net"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orchestrator
+  namespace: orchestrator
+  labels:
+    cluster: edge-cluster
+spec:
+  selector:
+    app: orchestrator-edge
+  ports:
+    - protocol: TCP
+      port: 1000
+      targetPort: 1000
+      nodePort: 31000
+  type: NodePort
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orchestrator
+  namespace: orchestrator
+  labels:
+    cluster: cloud-cluster
+spec:
+  selector:
+    app: orchestrator-cloud
+  ports:
+    - protocol: TCP
+      port: 1000
+      targetPort: 1000
+      nodePort: 31001
+  type: NodePort

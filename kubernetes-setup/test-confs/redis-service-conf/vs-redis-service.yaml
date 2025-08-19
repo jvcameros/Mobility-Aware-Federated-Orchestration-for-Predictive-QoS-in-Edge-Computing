@@ -1,0 +1,23 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: redis-route-by-cluster
+  namespace: car
+spec:
+  hosts:
+  - redis.car.svc.cluster.local
+  http:
+  - match:
+    - sourceLabels:
+        cluster: edge-cluster
+    route:
+    - destination:
+        host: redis.car.svc.cluster.local
+        subset: edge
+  - match:
+    - sourceLabels:
+        cluster: cloud-cluster
+    route:
+    - destination:
+        host: redis.car.svc.cluster.local
+        subset: cloud

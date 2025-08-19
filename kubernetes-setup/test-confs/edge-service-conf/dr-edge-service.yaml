@@ -1,0 +1,22 @@
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: edge-service-destination
+  namespace: car
+spec:
+  host: edge-service.car.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+  subsets:
+  - name: pop1-server
+    labels:
+      cluster: edge-cluster
+  - name: pop2-server
+    labels:
+      cluster: cloud-cluster
+#  - name: $ALLOCATOR
+#    labels:
+#      user: $ALLOCATOR
+
+# ALLOCATOR=lucas envsubst < dr-edge-service-user.yaml | kubectl apply -n car -f -

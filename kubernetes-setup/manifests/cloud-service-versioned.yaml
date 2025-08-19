@@ -1,0 +1,77 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cloud-service
+  labels:
+    app: cloud-service
+    service: cloud-service
+spec:
+  selector:
+    app: cloud-service
+  ports:
+    - protocol: TCP
+      port: 6000
+      targetPort: 6000
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloud-service
+  labels:
+    cluster: edge-cluster
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cloud-service
+      cluster: edge-cluster
+  template:
+    metadata:
+      labels:
+        app: cloud-service
+        cluster: edge-cluster
+    spec:
+      nodeSelector:
+        allocating: car-service
+      containers:
+        - name: cloud-service
+          image: asmaoui111/cloud-servicev2:latest
+          ports:
+            - containerPort: 6000
+          env:
+            - name: REDIS_HOST
+              value: "redis"
+            - name: REDIS_PORT
+              value: "6379"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloud-service
+  labels:
+    cluster: cloud-cluster
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cloud-service
+      cluster: cloud-cluster
+  template:
+    metadata:
+      labels:
+        app: cloud-service
+        cluster: cloud-cluster
+    spec:
+      nodeSelector:
+        allocating: car-service
+      containers:
+        - name: cloud-service
+          image: asmaoui111/cloud-servicev2:latest
+          ports:
+            - containerPort: 6000
+          env:
+            - name: REDIS_HOST
+              value: "redis"
+            - name: REDIS_PORT
+              value: "6379"

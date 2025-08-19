@@ -1,0 +1,29 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: edge-service
+  namespace: car
+spec:
+  hosts:
+    - edge-service.car.svc.cluster.local
+  http:
+    - match:
+        - headers:
+            x-user-gateway:
+             exact: car11
+      route:
+        - destination:
+            host: edge-service.car.svc.cluster.local
+            subset: pop2-server
+          weight: 100
+
+    # Default route 
+#    - route:
+#        - destination:
+#            host: edge-service.car.svc.cluster.local
+#            subset: edge-cluster  #edge-cluster route 
+#          weight: 50
+#        - destination:
+#            host: edge-service.car.svc.cluster.local
+#            subset: cloud-cluster  #cloud-cluster route 
+#          weight: 50

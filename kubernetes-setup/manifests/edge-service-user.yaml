@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: edge-service-$ALLOCATOR
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: edge-service
+      user: $ALLOCATOR
+  template:
+    metadata:
+      labels:
+        app: edge-service
+        user: $ALLOCATOR
+    spec:
+      nodeSelector:
+        user-allocating: $ALLOCATOR
+      containers:
+      - name: edge-service
+        image: jvcameros/edge-service-user:latest
+        ports:
+        - containerPort: 8080
+        env:
+          - name: USER
+            value: $ALLOCATOR
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: edge-service-$ALLOCATOR
+  namespace: car
+spec:
+  host: edge-service.car.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+  subsets:
+  - name: $ALLOCATOR
+    labels:
+      user: $ALLOCATOR
+
+# ALLOCATOR=lucas envsubst < edge-service-user.yaml | kubectl apply -n  car -f -
