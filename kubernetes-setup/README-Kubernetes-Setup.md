@@ -17,6 +17,8 @@ For enabling **inter-master communication** and **inter-control-plane access**, 
 1. Ensure that the required **OpenStack connections** are in place.
 2. Define the **Kubernetes context** correctly.
 
+**⚠️ Note for Replication:**  
+To replicate this scenario in your own environment, you must **redefine the Kubernetes manifests** to reference your **personal Docker images**. This ensures that the deployment uses the correct container images built under your account.
+
 An extensive guide on configuring access for multiple clusters can be found here:  
 [Kubernetes: Configure access to multiple clusters](https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters)
-
