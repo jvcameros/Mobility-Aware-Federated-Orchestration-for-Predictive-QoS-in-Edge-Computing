@@ -1,0 +1,11 @@
+build-essential
+gcc
+curl
+git
+jq
+openssh-client
+libffi-dev
+libssl-dev
+libpq-dev
+python3-dev
+
