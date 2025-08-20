@@ -104,6 +104,10 @@ ORCH_NS="orchestrator"
 ORCH_POD_DEST=$(ssh -i keyshare -o StrictHostKeyChecking=no -o LogLevel=ERROR  ubuntu@"$MASTER_DEST_IP" \
   "KUBECONFIG=/etc/kubernetes/admin.conf kubectl get pod -n $ORCH_NS -o jsonpath='{.items[0].metadata.name}'")
 
+ORCH_POD_SOURCE=$(ssh -i keyshare -o StrictHostKeyChecking=no -o LogLevel=ERROR  ubuntu@"$MASTER_SOURCE_IP" \
+  "KUBECONFIG=/etc/kubernetes/admin.conf kubectl get pod -n $ORCH_NS -o jsonpath='{.items[0].metadata.name}'")
+
+
 echo "Orchestrator pod ID in destination: $ORCH_POD_DEST"
 
 if [[ -z "$ORCH_POD_DEST" ]]; then
@@ -113,17 +117,12 @@ fi
 
 echo "🛠️ Generating JSON file for the migrating instance..."
 jq -n --arg name "$INSTANCE_NAME" --arg port_id "$NEW_PORT_ID" --arg net "$DEST_MASTER_NET" --arg ip "$NEW_FIXED_IP" --arg fip "$FLOATING_IP" \
-  '[{ name: $name, ports: [{ port_id: $port_id, network: $net, fixed_ip: $ip, floating_ips: [$fip] }] }]' > /tmp/new-instance.json
+  '[{ name: $name, ports: [{ port_id: $port_id, network: $net, fixed_ip: $ip, floating_ips: [$fip] }] }]' > ./new-instance.json
 
-scp -i keyshare  -o StrictHostKeyChecking=no -o LogLevel=ERROR /tmp/new-instance.json ubuntu@"$MASTER_DEST_IP":/tmp/
+scp -i keyshare  -o StrictHostKeyChecking=no -o LogLevel=ERROR ./new-instance.json ubuntu@"$MASTER_DEST_IP":/tmp/
 
 ssh -i keyshare -o StrictHostKeyChecking=no -o LogLevel=ERROR ubuntu@"$MASTER_DEST_IP" "
   KUBECONFIG=/etc/kubernetes/admin.conf kubectl cp /tmp/new-instance.json -n $ORCH_NS $ORCH_POD_DEST:/tmp/new-instance.json
 "
 
-ssh -i keyshare -o StrictHostKeyChecking=no -o LogLevel=ERROR ubuntu@"$MASTER_DEST_IP" "
-  KUBECONFIG=/etc/kubernetes/admin.conf kubectl exec -n $ORCH_NS $ORCH_POD_DEST -- sh -c '
-    jq -s \"[.[0][], .[1][]]\" /app/instances-info.json /tmp/new-instance.json > /tmp/tmp.json && \
-    mv /tmp/tmp.json /app/instances-info.json
-  '
-"
+./boot-svc-node.sh "$INSTANCE_NAME"

@@ -33,20 +33,6 @@ MASTER_SRC_IP=$(get_field "$MASTER_SRC" ".ports[0].fixed_ip")
 MASTER_DEST_IP=$(get_field "$MASTER_DEST" ".ports[0].fixed_ip")
 
 
-ssh -i keyshare -o StrictHostKeyChecking=no -o LogLevel=ERROR ubuntu@"$MASTER_SRC_IP" "KUBECONFIG=/etc/kubernetes/admin.conf bash -s" << EOF
-if kubectl get node "$ALLOCATOR" &>/dev/null; then
-  kubectl label node $ALLOCATOR allocating=car-service
-fi
-EOF
-
-ssh -i keyshare -o StrictHostKeyChecking=no -o LogLevel=ERROR ubuntu@"$MASTER_DEST_IP" "KUBECONFIG=/etc/kubernetes/admin.conf bash -s" << EOF
-if kubectl get node "$ALLOCATOR" &>/dev/null; then
-  kubectl label node $ALLOCATOR allocating=car-service
-fi
-EOF
-
-
-
 # Primer ssh: aplicar el Deployment
 ssh -i keyshare -o StrictHostKeyChecking=no -o LogLevel=ERROR ubuntu@"$MASTER_SRC_IP" \
   "KUBECONFIG=/etc/kubernetes/admin.conf bash -s" <<EOF

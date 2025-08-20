@@ -26,9 +26,12 @@ RUN mkdir -p /root/.config/openstack
 COPY clouds.yaml /root/.config/openstack/clouds.yaml
 
 COPY orchestrator.py .
+COPY comparator.py .
 COPY operations/ .
 COPY keyshare .
 COPY entrypoint.sh .
+
+RUN chmod +x /app/entrypoint.sh
 
 EXPOSE 1000
 CMD ["./entrypoint.sh"]

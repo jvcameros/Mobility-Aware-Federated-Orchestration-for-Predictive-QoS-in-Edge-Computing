@@ -36,17 +36,13 @@ MASTER_DEST_IP=$(get_field "$MASTER_DEST" ".ports[0].fixed_ip")
 ssh -i keyshare -o StrictHostKeyChecking=no -o LogLevel=ERROR ubuntu@"$MASTER_SRC_IP" "KUBECONFIG=/etc/kubernetes/admin.conf bash -s" << EOF
 kubectl delete deployment edge-service-$ALLOCATOR -n car
 kubectl delete destinationrule edge-service-$ALLOCATOR -n car
-if kubectl get node "$ALLOCATOR" &>/dev/null; then
-  kubectl label node $ALLOCATOR allocating-
-fi
+
 EOF
 
 ssh -i keyshare -o StrictHostKeyChecking=no -o LogLevel=ERROR ubuntu@"$MASTER_DEST_IP" "KUBECONFIG=/etc/kubernetes/admin.conf bash -s" << EOF
 kubectl delete deployment edge-service-$ALLOCATOR -n car
 kubectl delete destinationrule edge-service-$ALLOCATOR -n car
-if kubectl get node "$ALLOCATOR" &>/dev/null; then
-  kubectl label node $ALLOCATOR allocating-
-fi
+
 
 EOF
 
