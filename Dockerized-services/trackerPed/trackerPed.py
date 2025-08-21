@@ -12,38 +12,29 @@ app = FastAPI()
 class GatewayRequest(BaseModel):
     latitude: float
     longitude: float
-    front_distance: float | None = Field(None, description="Distancia frontal para proxy")
-    rear_distance: float | None = Field(None, description="Distancia trasera para proxy")
-    details: str | None = Field(None, description="Detalles para proxy")
+    hour_sin: float
+    hour_cos: float
+    weekday_sin: float
+    weekday_cos: float
 
 @app.post("/")
 async def gateway(request: Request, data: GatewayRequest):
     now = datetime.now()
 
-    # Codificación cíclica de la hora
-    hour_decimal = now.hour + now.minute / 60.0
-    hour_angle = 2 * math.pi * hour_decimal / 24.0
-    hour_sin = math.sin(hour_angle)
-    hour_cos = math.cos(hour_angle)
-
-    # Codificación cíclica del día de la semana
-    weekday_index = now.weekday()
-    weekday_angle = 2 * math.pi * weekday_index / 7.0
-    weekday_sin = math.sin(weekday_angle)
-    weekday_cos = math.cos(weekday_angle)
-
+    
     orchestrator_payload = {
         "latitude": data.latitude,
         "longitude": data.longitude,
         "user": user,
-        "hour_sin": hour_sin,
-        "hour_cos": hour_cos,
-        "weekday_sin": weekday_sin,
-        "weekday_cos": weekday_cos
+        "hour_sin": data.hour_sin,
+        "hour_cos": data.hour_cos,
+        "weekday_sin": data.weekday_sin,
+        "weekday_cos": data.weekday_cos
     }
 
     errors = []
     orchestrator_response_data = None
+    proxy_response_data = None   # 🔹 inicializamos antes de usarlo
 
     async with httpx.AsyncClient() as client:
         headers = {"x-user-gateway": user}
@@ -61,10 +52,11 @@ async def gateway(request: Request, data: GatewayRequest):
     if errors:
         raise HTTPException(status_code=502, detail="; ".join(errors))
 
-    # Construir respuesta final
+    # 🔹 Construir respuesta final
     result = {
-        "orquestador_response": orchestrator_response_data
+        "predictor_response": orchestrator_response_data
     }
     if proxy_response_data is not None:
         result["proxy_response"] = proxy_response_data
+
     return result

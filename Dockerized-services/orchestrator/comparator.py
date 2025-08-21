@@ -6,6 +6,8 @@ import subprocess
 
 CAR_SEQ_FILE = "car_sequences.json"
 PRED_SEQ_FILE = "prediction_sequences.json"
+EDGE_SERVERS_FILE = "edge_servers.json"
+
 
 def load_json(filename):
     try:
@@ -17,30 +19,24 @@ def load_json(filename):
 def euclidean_distance(lat1, lon1, lat2, lon2):
     return math.sqrt((lat1 - lat2) ** 2 + (lon1 - lon2) ** 2)
 
+EDGE_SERVERS_FILE = "/app/edge_servers.json"
+
 def get_edge_servers():
-    edge_servers = []
-    for i in [1, 2]:
-        uid = os.getenv(f"EDGE_SERVER{i}_UID")
-        lat = os.getenv(f"EDGE_SERVER{i}_LAT")
-        lon = os.getenv(f"EDGE_SERVER{i}_LON")
-        if uid and lat and lon:
-            try:
-                edge_servers.append({
-                    "uid": uid,
-                    "lat": float(lat),
-                    "lon": float(lon)
-                })
-            except ValueError:
-                continue
-    return edge_servers
+    try:
+        with open(EDGE_SERVERS_FILE, "r") as f:
+            return json.load(f)
+    except Exception:
+        return []
 
 def main():
     edge_servers = get_edge_servers()
+    print(f"[LOG] Edge servers cargados: {edge_servers}")  # <-- Log de edge servers
+    last_closest_uid = None  # Guardar el último nodo más cercano
+
     while True:
         car_seq = load_json(CAR_SEQ_FILE)
         if not car_seq:
-            print("car_sequences.json empty, waiting 15 segs...")
-            time.sleep(15)
+            time.sleep(5)
             continue
 
         car = car_seq[0]
@@ -49,8 +45,8 @@ def main():
 
         pred_seq = load_json(PRED_SEQ_FILE)
         if not pred_seq:
-            print("prediction_sequences.json empty, waiting 15 secs...")
-            time.sleep(15)
+            print("prediction_sequences.json empty, waiting 5 secs...")
+            time.sleep(5)
             continue
 
         candidates = []
@@ -75,7 +71,7 @@ def main():
                 elif int(uid) == 1:
                     cand["uid"] = "lucas"
             except Exception:
-        # si no es convertible a int, lo dejamos tal cual
+                # si no es convertible a int, lo dejamos tal cual
                 pass
             dist = euclidean_distance(car_lat, car_lon, cand["lat"], cand["lon"])
             if dist < min_dist:
@@ -83,15 +79,27 @@ def main():
                 closest = cand
 
         if closest:
-            print(f"Closest node to {car_uid} is {closest['uid']} (distance: {min_dist:.6f})")
-
-            script_path = "/app/edit-access-svc-node.sh"
-            uid_arg = str(closest["uid"])
-            proc = subprocess.Popen(["/bin/bash", script_path, uid_arg])
+            current_uid = str(closest["uid"])
+            if current_uid != last_closest_uid:
+                print(f"Closest node to {car_uid} is {current_uid} (distance: {min_dist:.6f})")
+                deletion_script_path = "/app/del-svc-node.sh"
+                deployment_script_path = "/app/boot-svc-node.sh"
+                redirect_script_path = "/app/edit-access-svc-node.sh"
+                uid_arg = current_uid
+                # Solo borrar si last_closest_uid no es None
+                if last_closest_uid is not None:
+                proc1 = subprocess.Popen(["/bin/bash", deletion_script_path, last_closest_uid])
+                proc2 = subprocess.Popen(["/bin/bash", deployment_script_path, uid_arg])
+                print(f"Deploying svc in {current_uid}...")
+                time.sleep(5)
+                proc3 = subprocess.Popen(["/bin/bash", redirect_script_path, uid_arg])
+                last_closest_uid = current_uid
+            else:
+                print(f"Closest node to {car_uid} is still {current_uid} (distance: {min_dist:.6f}), no action taken.")
         else:
             print("Couldn't find any prediction or edge server.")
 
-        time.sleep(15)
+        time.sleep(5)
 
 if __name__ == "__main__":
     main()

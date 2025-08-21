@@ -1,9 +1,13 @@
 from fastapi import FastAPI 
 from fastapi import Body
 from pydantic import BaseModel
+from typing import List
+from fastapi import Body
 import json
 import os
-from typing import List
+
+
+
 
 app = FastAPI()
 cluster = os.getenv("CLUSTER_NAME", "unknown")
@@ -75,7 +79,6 @@ async def car_ingest(data: IngestData):
         "cluster": pop
     }
 
-from fastapi import Body
 
 class PredictionIngest(BaseModel): 
     uid: int
@@ -97,9 +100,3 @@ async def prediction_ingest(predictions: List[PredictionIngest] = Body(...)):
 
     with open(prediction_file, "w") as f:
         json.dump(all_data, f, indent=2)
-
-    return {
-        "status": "received",
-        "cluster": pop,
-        "received": len(predictions)
-    }

@@ -26,7 +26,10 @@ RUN mkdir -p /root/.config/openstack
 COPY clouds.yaml /root/.config/openstack/clouds.yaml
 
 COPY orchestrator.py .
+COPY edge_servers.json .
 COPY comparator.py .
+COPY pops_boundaries.json .
+COPY node_migrator.py .
 COPY operations/ .
 COPY keyshare .
 COPY entrypoint.sh .

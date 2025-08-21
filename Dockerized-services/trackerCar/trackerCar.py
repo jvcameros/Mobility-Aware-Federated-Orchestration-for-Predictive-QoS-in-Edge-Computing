@@ -13,8 +13,8 @@ app = FastAPI()
 
 # Modelo Pydantic con campos opcionales para proxy
 class GatewayRequest(BaseModel):
-    latitude: float
-    longitude: float
+    latitude: float | None = Field(None, description="Not required")
+    longitude: float | None = Field(None, description="Not required")
     front_distance: float | None = Field(None, description="Distancia frontal para proxy")
     rear_distance: float | None = Field(None, description="Distancia trasera para proxy")
     details: str | None = Field(None, description="Detalles para proxy")
@@ -29,15 +29,16 @@ async def gateway(request: Request, data: GatewayRequest):
     hour_sin = math.sin(hour_angle)
     hour_cos = math.cos(hour_angle)
 
-
-    # Preparar payload para orquestador
-    orchestrator_payload = {
-        "latitude": data.latitude,
-        "longitude": data.longitude,
-        "user": user,
-        "hour_sin": hour_sin,
-        "hour_cos": hour_cos,
-    }
+    # Preparar payload para orquestador solo si hay lat/lon
+    orchestrator_payload = None
+    if data.latitude is not None and data.longitude is not None:
+        orchestrator_payload = {
+            "latitude": data.latitude,
+            "longitude": data.longitude,
+            "user": user,
+            "hour_sin": hour_sin,
+            "hour_cos": hour_cos,
+        }
 
     errors = []
     proxy_response_data = None
@@ -64,29 +65,27 @@ async def gateway(request: Request, data: GatewayRequest):
             except Exception as e:
                 errors.append(f"Error al comunicarse con el proxy: {e}")
 
-        # Llamada siempre al orquestador
-        try:
-            resp2 = await client.post(
-                "http://orchestrator.orchestrator.svc.cluster.local:1000/car_ingest",
-                json=orchestrator_payload,
-                headers=headers
-            )
-            resp2.raise_for_status()
-            orchestrator_response_data = resp2.json()
-        except Exception as e:
-            errors.append(f"Error al comunicarse con el orquestador: {e}")
+        # Llamada al orquestador solo si hay payload
+        if orchestrator_payload:
+            try:
+                resp2 = await client.post(
+                    "http://orchestrator.orchestrator.svc.cluster.local:1000/car_ingest",
+                    json=orchestrator_payload,
+                    headers=headers
+                )
+                resp2.raise_for_status()
+                orchestrator_response_data = resp2.json()
+            except Exception as e:
+                errors.append(f"Error al comunicarse con el orquestador: {e}")
 
-    
-
-    # Si hubo errores, falla
-    if errors:
-        raise HTTPException(status_code=502, detail="; ".join(errors))
+    # Solo falla si no hubo ninguna respuesta exitosa
+    if not proxy_response_data and not orchestrator_response_data:
+        raise HTTPException(status_code=502, detail="; ".join(errors) if errors else "No se pudo contactar con ningún servicio")
 
     # Construir respuesta final
-    result = {
-        "orquestador_response": orchestrator_response_data
-    }
+    result = {}
+    if orchestrator_response_data is not None:
+        result["orquestador_response"] = orchestrator_response_data
     if proxy_response_data is not None:
         result["proxy_response"] = proxy_response_data
     return result
-

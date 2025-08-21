@@ -1,0 +1,12 @@
+[
+{
+    "uid": "edge1-server",
+    "lat": 35.915,
+    "lon": 140.05
+  },
+  {
+    "uid": "edge2-server",
+    "lat": 36.0575,
+    "lon": 140.05
+  }
+]

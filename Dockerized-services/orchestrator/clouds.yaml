@@ -13,8 +13,8 @@ clouds:
 
       auth_url: https://cloud.crocc.univ-toulouse.fr:5000
 
-      application_credential_id: "."
-      application_credential_secret: "."
+      application_credential_id: "cc8f161469094a2b85c4e25bd71beceb"
+      application_credential_secret: "Mansiones31400."
 
 
 
