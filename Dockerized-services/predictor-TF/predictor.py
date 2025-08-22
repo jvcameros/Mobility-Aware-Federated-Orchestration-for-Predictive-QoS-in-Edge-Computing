@@ -10,6 +10,7 @@ from app.predictor import PredictionBatcher, PredictionRequest
 app = FastAPI()
 users_file = "user_sequences.json"
 predictions_file = "predictions.json"
+predictions_storage_file = "predictions_storage.json"
 
 batcher = PredictionBatcher(batch_window_sec=1.0)  # Mismo batch_window que el predictor
 
@@ -46,7 +47,7 @@ def create_data_point(data: IngestData) -> List[float]:
 
 def save_ingest(data: IngestData, target_file: str, replace_existing: bool = False):
     payload = data.dict()
-    print(f"Received position from {data.user}:, ready for prediction")
+    print(f"Received position from user {data.user}. Ready to predict")
 
     try:
         with open(target_file, "r") as f:
@@ -118,6 +119,15 @@ async def predict_periodically():
             ]
             with open(predictions_file, "w") as f:
                 json.dump(predictions, f, indent=2)
+            
+            try:
+                with open(predictions_storage_file, "r") as f:
+                    all_preds = json.load(f)
+            except (json.JSONDecodeError, FileNotFoundError):
+                all_preds = []
+            all_preds.extend(predictions)
+            with open(predictions_storage_file, "w") as f:
+                json.dump(all_preds, f, indent=2)
 
             # Enviar a dos APIs distintas
             try:
@@ -148,4 +158,4 @@ async def predict_periodically():
             with open(predictions_file, "w") as f:
                 json.dump([], f, indent=2)
 
-        await asyncio.sleep(30)  # Espera 30 segundos antes de siguiente ciclo
+        await asyncio.sleep(15)  # Espera 30 segundos antes de siguiente ciclo

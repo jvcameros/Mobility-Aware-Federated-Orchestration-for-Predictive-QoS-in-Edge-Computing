@@ -15,19 +15,14 @@ app = FastAPI()
 class GatewayRequest(BaseModel):
     latitude: float | None = Field(None, description="Not required")
     longitude: float | None = Field(None, description="Not required")
+    hour_sin: float | None = Field(None, description="Not required")
+    hour_cos: float | None = Field(None, description="Not required")
     front_distance: float | None = Field(None, description="Distancia frontal para proxy")
     rear_distance: float | None = Field(None, description="Distancia trasera para proxy")
     details: str | None = Field(None, description="Detalles para proxy")
 
 @app.post("/")
 async def gateway(request: Request, data: GatewayRequest):
-    now = datetime.now()
-
-    # Codificación cíclica de la hora
-    hour_decimal = now.hour + now.minute / 60.0
-    hour_angle = 2 * math.pi * hour_decimal / 24.0
-    hour_sin = math.sin(hour_angle)
-    hour_cos = math.cos(hour_angle)
 
     # Preparar payload para orquestador solo si hay lat/lon
     orchestrator_payload = None
@@ -36,8 +31,8 @@ async def gateway(request: Request, data: GatewayRequest):
             "latitude": data.latitude,
             "longitude": data.longitude,
             "user": user,
-            "hour_sin": hour_sin,
-            "hour_cos": hour_cos,
+            "hour_sin": data.hour_sin,
+            "hour_cos": data.hour_cos,
         }
 
     errors = []

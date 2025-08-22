@@ -66,7 +66,7 @@ def main():
         for cand in candidates:
             uid = cand.get("uid")
             try:
-                if int(uid) == 8:
+                if int(uid) == 0:
                     cand["uid"] = "joe"
                 elif int(uid) == 1:
                     cand["uid"] = "lucas"
@@ -88,7 +88,7 @@ def main():
                 uid_arg = current_uid
                 # Solo borrar si last_closest_uid no es None
                 if last_closest_uid is not None:
-                proc1 = subprocess.Popen(["/bin/bash", deletion_script_path, last_closest_uid])
+                    proc1 = subprocess.Popen(["/bin/bash", deletion_script_path, last_closest_uid])
                 proc2 = subprocess.Popen(["/bin/bash", deployment_script_path, uid_arg])
                 print(f"Deploying svc in {current_uid}...")
                 time.sleep(5)

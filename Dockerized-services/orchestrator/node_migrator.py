@@ -1,81 +1,112 @@
 import json
-import time
 import os
+import time
+import subprocess
 
 def load_json(filename):
     try:
         with open(filename, "r") as f:
             return json.load(f)
-    except Exception:
+    except Exception as e:
+        print(f"Error loading {filename}: {e}")
         return []
 
-def point_in_square(lat, lon, corners):
-    lats = [c["lat"] for c in corners]
-    lons = [c["lon"] for c in corners]
-    return min(lats) <= lat <= max(lats) and min(lons) <= lon <= max(lons)
+def get_registered_nodes(instances_info):
+    """
+    List of registered nodes in the pop excluding master nodes 
+    """
+    nodes = []
+    for inst in instances_info:
+        name = str(inst.get("name", ""))
+        if not name.startswith("master"):
+            nodes.append(name)
+    return nodes
 
-def get_pop_for_point(lat, lon, pops_boundaries):
-    for pop in pops_boundaries:
-        if point_in_square(lat, lon, pop["corners"]):
+def get_pop_for_point(lat, lon, pop_boundaries):
+    """
+    Returns the name of the pop to which the position (lat, lon) belongs.
+    """
+    for pop in pop_boundaries:
+        corners = pop["corners"]
+        lats = [c["lat"] for c in corners]
+        lons = [c["lon"] for c in corners]
+        if min(lats) <= lat <= max(lats) and min(lons) <= lon <= max(lons):
             return pop["region"]
-    return None
+    return "unknown"
 
-def run_migrator():
-    pops_boundaries = load_json("/app/pops_boundaries.json")
-    instances_info = load_json("/app/instances-info.json")
-    prediction_sequences = load_json("/app/prediction_sequences.json")
-    car_sequences = load_json("/app/car_sequences.json")
+def get_future_positions(nodes, car_sequences, prediction_sequences):
+    """
+    Returns a dictionary with the future positions of the nodes present in the list nodes.
+    For cars, it takes the coordinates from car_sequences.
+    For walkers, it takes the predictions from prediction_sequences (mapping 0->joe, 1->lucas).
+    """
+    future_positions = {}
 
-    current_pop = os.getenv("POP_NAME", "unknown")
-
-    # 1. Ver si lucas o joe están presentes en instances-info.json
-    lucas_present = any(str(inst.get("uid")) == "1" for inst in instances_info)
-    joe_present = any(str(inst.get("uid")) == "8" for inst in instances_info)
-
-    # 2. Buscar predicciones para lucas y joe
-    lucas_pred = next((pred for pred in prediction_sequences if str(pred.get("uid")) == "1"), None)
-    joe_pred = next((pred for pred in prediction_sequences if str(pred.get("uid")) == "8"), None)
-
-    # 3. Procesar predicción de lucas
-    if lucas_present and lucas_pred:
-        lat, lon = lucas_pred["prediction"][0], lucas_pred["prediction"][1]
-        pop_pred = get_pop_for_point(lat, lon, pops_boundaries)
-        if pop_pred == current_pop:
-            print("[LOG] lucas: No action needed, future position is inside current pop.")
-        else:
-            print(f"[LOG] lucas: Migration needed from {current_pop} to {pop_pred} (prediction: {lat}, {lon})")
-
-    # 4. Procesar predicción de joe
-    if joe_present and joe_pred:
-        lat, lon = joe_pred["prediction"][0], joe_pred["prediction"][1]
-        pop_pred = get_pop_for_point(lat, lon, pops_boundaries)
-        if pop_pred == current_pop:
-            print("[LOG] joe: No action needed, future position is inside current pop.")
-        else:
-            print(f"[LOG] joe: Migration needed from {current_pop} to {pop_pred} (prediction: {lat}, {lon})")
-
-    # 5. Procesar coches (opcional, ejemplo para un coche con uid=car11)
+    # Procesar coches
     for car in car_sequences:
-        uid = car.get("uid")
-        seq = car.get("sequence", [])
-        if not seq or len(seq[0]) < 2:
-            continue
-        lat, lon = seq[0][0], seq[0][1]
-        pop_pred = get_pop_for_point(lat, lon, pops_boundaries)
-        # Busca si el coche está en instances_info
-        car_present = any(str(inst.get("uid")) == str(uid) for inst in instances_info)
-        if car_present:
-            pop_actual = current_pop
-        else:
-            pop_actual = None
-        if pop_actual and pop_pred and pop_actual != pop_pred:
-            print(f"[LOG] Car {uid} will migrate from {pop_actual} to {pop_pred} (prediction: {lat}, {lon})")
-        elif pop_actual and pop_pred and pop_actual == pop_pred:
-            print(f"[LOG] Car {uid}: No action needed, future position is inside current pop.")
+        uid = str(car.get("uid"))
+        if uid in nodes:
+            seq = car.get("sequence", [])
+            if seq and len(seq[0]) >= 2:
+                lat, lon = seq[0][0], seq[0][1]
+                future_positions[uid] = (lat, lon)
+
+    # Procesar caminantes (joe y lucas)
+    for pred in prediction_sequences:
+        pred_uid = str(pred.get("uid"))
+        if pred_uid == "0" and "joe" in nodes:
+            pred_pos = pred.get("prediction", [])
+            if len(pred_pos) >= 2:
+                lat, lon = pred_pos[0], pred_pos[1]
+                future_positions["joe"] = (lat, lon)
+        elif pred_uid == "1" and "lucas" in nodes:
+            pred_pos = pred.get("prediction", [])
+            if len(pred_pos) >= 2:
+                lat, lon = pred_pos[0], pred_pos[1]
+                future_positions["lucas"] = (lat, lon)
+    return future_positions
 
 def main():
+    current_pop = os.getenv("POP_NAME", "unknown")
     while True:
-        run_migrator()
+        # Read nodes registered in the pop
+        instances_info = load_json("/app/instances-info.json")
+        nodes = get_registered_nodes(instances_info)
+
+        # Read future positions of cars and pedestrians predictions
+        car_sequences = load_json("/app/car_sequences.json")
+        prediction_sequences = load_json("/app/prediction_sequences.json")
+        pop_boundaries = load_json("/app/pops_boundaries.json")
+        future_positions = get_future_positions(nodes, car_sequences, prediction_sequences)
+
+
+
+        # Shows found future positions
+        for uid in future_positions:
+            lat, lon = future_positions[uid]
+            future_pop = get_pop_for_point(lat, lon, pop_boundaries)
+            future_positions[uid] = {
+                "lat": lat,
+                "lon": lon,
+                "pop": future_pop
+            }        
+
+        # Logic behind logs: if future position is different from current pop says it 
+        #THE MIGRATION SCRIPT SHOULD BE ADDED HERE 
+        for uid, info in future_positions.items():
+            print(f"[INFO] Future position for {uid}: lat={info['lat']}, lon={info['lon']}, pop={info['pop']}")
+            if info["pop"] != current_pop:
+                migrate_script_path = "/app/migratePed.sh"
+                # Asignación de destination_pop según el pop futuro
+                if info["pop"] == "pop1":
+                    destination_pop = "edge-cluster"
+                elif info["pop"] == "pop2":
+                    destination_pop = "cloud-cluster"
+                else:
+                    destination_pop = info["pop"]  # fallback por si acaso
+                print(f"[LOG] Node {uid} must migrate from {current_pop} to {destination_pop} (future position: {info['lat']}, {info['lon']})")
+                subprocess.Popen(["/bin/bash", migrate_script_path, uid, destination_pop])
+                time.sleep(75)
         time.sleep(5)
 
 if __name__ == "__main__":
